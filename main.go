@@ -176,7 +176,7 @@ func run(ctx context.Context, args []string) error {
 	}
 
 	go func() {
-		log.Printf("listening on %s\n", httpServer.Addr)
+		log.Printf("listening on http://%s\n", httpServer.Addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("error listening and serving: %s\n", err)
 		}
@@ -397,4 +397,3 @@ func handleMarkNotificationRead(ghCLI *GitHubCLI) http.Handler {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	})
 }
-

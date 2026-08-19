@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Notifications</title>
+    <link rel="stylesheet" href="ember.css">
+    <link rel="stylesheet" href="umber-light.css" media="(prefers-color-scheme: light)">
+    <link rel="stylesheet" href="umber-dark.css" media="(prefers-color-scheme: dark)">
+    <style>
+        body {
+            display: block;
+            padding: 0;
+            margin: 0;
+        }
+        .page-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .page-header-left h1 {
+            font-family: monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--header-text);
+            white-space: nowrap;
+        }
+        .page-header .status-text {
+            font-family: monospace;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--header-text);
+            white-space: nowrap;
+        }
+        .shortcuts {
+            font-size: 0.75rem;
+            color: var(--header-text);
+            white-space: nowrap;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            opacity: 0.7;
+            font-family: monospace;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 20px 100px 20px;
+        }
+        .notification-card {
+            background: var(--container-bg);
+            border-radius: 6px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .notification-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-active);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .notification-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .notification-body {
+            margin: 16px 0;
+            padding: 12px;
+            background: var(--surface-bg);
+            border: 1px solid var(--surface-border);
+            border-bottom: 3px solid var(--surface-bottom);
+            border-radius: 6px;
+            white-space: normal;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        .notification-body ul,
+        .notification-body ol,
+        .comment-body ul,
+        .comment-body ol {
+            margin-left: 20px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+        }
+        .notification-body li,
+        .comment-body li {
+            margin-bottom: 2px;
+        }
+        .notification-body pre,
+        .comment-body pre {
+            overflow-x: auto;
+            max-width: 100%;
+            padding: 8px;
+            background: var(--container-bg);
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+        .notification-body p,
+        .comment-body p {
+            margin: 0 0 12px 0;
+        }
+        .notification-body p:last-child,
+        .comment-body p:last-child {
+            margin-bottom: 0;
+        }
+        .notification-body h1,
+        .notification-body h2,
+        .notification-body h3,
+        .notification-body h4,
+        .notification-body h5,
+        .notification-body h6,
+        .comment-body h1,
+        .comment-body h2,
+        .comment-body h3,
+        .comment-body h4,
+        .comment-body h5,
+        .comment-body h6 {
+            margin: 16px 0 8px 0;
+            font-weight: 600;
+        }
+        .notification-body h1:first-child,
+        .notification-body h2:first-child,
+        .notification-body h3:first-child,
+        .notification-body h4:first-child,
+        .notification-body h5:first-child,
+        .notification-body h6:first-child,
+        .comment-body h1:first-child,
+        .comment-body h2:first-child,
+        .comment-body h3:first-child,
+        .comment-body h4:first-child,
+        .comment-body h5:first-child,
+        .comment-body h6:first-child {
+            margin-top: 0;
+        }
+        .notification-body blockquote,
+        .comment-body blockquote {
+            margin: 12px 0;
+            padding-left: 16px;
+            border-left: 3px solid var(--surface-border);
+            color: var(--text-secondary);
+        }
+        .comments-section {
+            margin-top: 20px;
+        }
+        .comments-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+        .comment {
+            background: var(--surface-bg);
+            border: 1px solid var(--surface-border);
+            border-bottom: 3px solid var(--surface-bottom);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        .comment-header {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        .comment-author {
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .comment-body {
+            white-space: normal;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .disclosure {
+            background: var(--container-bg);
+            border: 1px solid var(--surface-border);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .disclosure-summary {
+            padding: 16px 20px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-active);
+            list-style: none;
+            user-select: none;
+            background: var(--surface-bg);
+            border-bottom: 1px solid transparent;
+            transition: all 0.15s ease;
+        }
+        .disclosure-summary:hover {
+            background: var(--container-bg);
+            color: var(--accent);
+        }
+        .disclosure[open] .disclosure-summary {
+            border-bottom-color: var(--surface-border);
+            background: var(--container-bg);
+        }
+        .disclosure-summary::-webkit-details-marker {
+            display: none;
+        }
+        .disclosure-summary::before {
+            content: '▶';
+            display: inline-block;
+            margin-right: 12px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            transition: transform 0.2s ease;
+        }
+        .disclosure[open] .disclosure-summary::before {
+            transform: rotate(90deg);
+        }
+        .disclosure-content {
+            padding: 16px 20px 20px 20px;
+        }
+        .disclosure-content .comment {
+            margin-bottom: 16px;
+        }
+        .disclosure-content .comment:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <div class="page-header-left">
+            <h1>GitHub Notifications</h1>
+        </div>
+        <div class="page-header-center">
+            <span class="status-text" id="status">Loading notifications...</span>
+        </div>
+        <div class="page-header-right">
+            <span class="shortcuts">
+                <span>Down <kbd>J</kbd></span>
+                <span>Up <kbd>K</kbd></span>
+                <span>Mark read <kbd>L</kbd></span>
+                <span>Open <kbd>O</kbd></span>
+            </span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="content"></div>
+    </div>
+
+
+
+    <script>
+        let notifications = [];
+        let currentIndex = 0;
+        let currentDetail = null;
+        let idleTimer = null;
+        let pollTimer = null;
+        let lastActivityTime = Date.now();
+
+        async function loadNotifications() {
+            try {
+                const response = await fetch('/api/notifications');
+                if (!response.ok) throw new Error('Failed to fetch notifications');
+                notifications = await response.json();
+
+                if (notifications.length === 0) {
+                    document.getElementById('content').innerHTML = '<div class="empty-state"><div class="empty-state-title">All caught up!</div><div>No notifications found</div></div>';
+                    document.getElementById('status').textContent = 'All caught up!';
+                    return;
+                }
+
+                document.getElementById('status').textContent = `${notifications.length} notification${notifications.length !== 1 ? 's' : ''} remaining`;
+                await loadNotificationDetail(0);
+            } catch (error) {
+                document.getElementById('content').innerHTML = `<div class="callout callout-error"><div class="callout-title">Error</div><div>${escapeHtml(error.message)}</div></div>`;
+            }
+        }
+
+        async function loadNotificationDetail(index) {
+            if (index >= notifications.length) {
+                document.getElementById('content').innerHTML = '<div class="empty-state"><div class="empty-state-title">🌟 All caught up!</div><div>All notifications processed</div></div>';
+                document.getElementById('status').textContent = 'All notifications processed';
+                return;
+            }
+
+            currentIndex = index;
+            const notification = notifications[index];
+
+            document.getElementById('content').innerHTML = '<div class="loading-state">Loading notification details...</div>';
+
+            try {
+                const response = await fetch(`/api/notification/details?subject_url=${encodeURIComponent(notification.subject_url)}&comments_url=`);
+                if (!response.ok) throw new Error('Failed to fetch notification details');
+                currentDetail = await response.json();
+
+                renderNotification(notification, currentDetail);
+                document.getElementById('status').textContent = `${index + 1} of ${notifications.length}`;
+            } catch (error) {
+                document.getElementById('content').innerHTML = `<div class="callout callout-error"><div class="callout-title">Error</div><div>Error loading details: ${escapeHtml(error.message)}</div></div>`;
+            }
+        }
+
+        function renderNotification(notification, detail) {
+            let commentsHtml = '';
+            if (detail.comments.length > 0) {
+                const fiveDaysAgo = new Date();
+                fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+                const commentsByTime = detail.comments.filter(comment =>
+                    new Date(comment.created_at) >= fiveDaysAgo
+                );
+                const lastThree = detail.comments.slice(-3);
+
+                const recentComments = commentsByTime.length >= lastThree.length ? commentsByTime : lastThree;
+                const earlierComments = detail.comments.slice(0, detail.comments.length - recentComments.length);
+
+                commentsHtml = '<div class="comments-section"><div class="comments-header">Comments</div>';
+
+                if (earlierComments.length > 0) {
+                    commentsHtml += `
+                        <details class="disclosure">
+                            <summary class="disclosure-summary">${earlierComments.length} earlier comment${earlierComments.length !== 1 ? 's' : ''}</summary>
+                            <div class="disclosure-content">
+                                ${earlierComments.map(comment => `
+                                    <div class="comment">
+                                        <div class="comment-header">
+                                            <span class="comment-author">${escapeHtml(comment.author)}</span>
+                                            <span> • ${formatDate(comment.created_at)}</span>
+                                        </div>
+                                        <div class="comment-body">${comment.body}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </details>
+                    `;
+                }
+
+                commentsHtml += recentComments.map(comment => `
+                    <div class="comment">
+                        <div class="comment-header">
+                            <span class="comment-author">${escapeHtml(comment.author)}</span>
+                            <span> • ${formatDate(comment.created_at)}</span>
+                        </div>
+                        <div class="comment-body">${comment.body}</div>
+                    </div>
+                `).join('');
+
+                commentsHtml += '</div>';
+            }
+
+            const html = `
+                <div class="notification-card">
+                    <div class="notification-title">
+                        ${escapeHtml(detail.title)}
+                    </div>
+                    <div class="notification-meta">
+                        <span>${escapeHtml(notification.repo)} #${detail.number}</span>
+                        <span>•</span>
+                        <span>${notification.reason}</span>
+                        <span>•</span>
+                        <span>${detail.state}</span>
+                    </div>
+                    ${detail.body ? `<div class="notification-body">${detail.body}</div>` : ''}
+                    ${commentsHtml}
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+
+
+        async function markAsReadAndContinue() {
+            const notification = notifications[currentIndex];
+
+            try {
+                const response = await fetch('/api/notification/mark-read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notification_url: notification.notification_url })
+                });
+
+                if (!response.ok) throw new Error('Failed to mark as read');
+
+                await loadNotificationDetail(currentIndex + 1);
+            } catch (error) {
+                alert(`Error marking as read: ${error.message}`);
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.scrollBy({ top: 300, behavior: 'smooth' });
+            } else if (e.code === 'KeyK' || e.key === 'k' || e.key === 'K') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.scrollBy({ top: -300, behavior: 'smooth' });
+            } else if (e.code === 'KeyL' || e.key === 'l' || e.key === 'L') {
+                e.preventDefault();
+                markAsReadAndContinue();
+            } else if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O') {
+                e.preventDefault();
+                if (notifications[currentIndex] && currentDetail && currentDetail.url) {
+                    window.open(currentDetail.url, '_blank');
+                }
+            }
+        }, true);
+
+        // Activity tracking for idle detection
+        function resetActivity() {
+            lastActivityTime = Date.now();
+            stopPolling();
+            startIdleTimer();
+        }
+
+        function startIdleTimer() {
+            clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => {
+                startPolling();
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+
+        function startPolling() {
+            if (pollTimer) return; // Already polling
+            pollTimer = setInterval(async () => {
+                await pollForNewNotifications();
+            }, 3 * 60 * 1000); // 3 minutes
+        }
+
+        function stopPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        async function pollForNewNotifications() {
+            try {
+                const response = await fetch('/api/notifications');
+                if (!response.ok) return;
+
+                const newNotifications = await response.json();
+                const oldCount = notifications.length;
+
+                // Merge new notifications that aren't already in the list
+                const existingUrls = new Set(notifications.map(n => n.notification_url));
+                const freshNotifications = newNotifications.filter(n => !existingUrls.has(n.notification_url));
+
+                if (freshNotifications.length > 0) {
+                    notifications = [...notifications, ...freshNotifications];
+
+                    // Update status
+                    document.getElementById('status').textContent = `${notifications.length} notification${notifications.length !== 1 ? 's' : ''} remaining`;
+
+                    // If we're on "all done" screen, load the first new notification
+                    const content = document.getElementById('content');
+                    if (content.innerHTML.includes('All caught up!')) {
+                        currentIndex = oldCount;
+                        await loadNotificationDetail(currentIndex);
+                    }
+                }
+            } catch (error) {
+                console.error('Polling error:', error);
+            }
+        }
+
+        // Track activity on any interaction
+        document.addEventListener('keydown', () => resetActivity(), true);
+        document.addEventListener('click', resetActivity);
+        document.addEventListener('scroll', resetActivity);
+
+        startIdleTimer();
+        loadNotifications();
+    </script>
+</body>
+</html>

@@ -206,6 +206,16 @@
             background: var(--surface-bg);
             border-bottom: 1px solid transparent;
             transition: all 0.15s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .disclosure-summary-hint {
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            opacity: 0.7;
+            font-family: monospace;
         }
         .disclosure-summary:hover {
             background: var(--container-bg);
@@ -218,7 +228,7 @@
         .disclosure-summary::-webkit-details-marker {
             display: none;
         }
-        .disclosure-summary::before {
+        .disclosure-summary-label::before {
             content: '▶';
             display: inline-block;
             margin-right: 12px;
@@ -226,7 +236,7 @@
             color: var(--text-secondary);
             transition: transform 0.2s ease;
         }
-        .disclosure[open] .disclosure-summary::before {
+        .disclosure[open] .disclosure-summary-label::before {
             transform: rotate(90deg);
         }
         .disclosure-content {
@@ -254,6 +264,7 @@
                 <span>Up <kbd>K</kbd></span>
                 <span>Mark read <kbd>L</kbd></span>
                 <span>Open <kbd>O</kbd></span>
+                <span>Earlier comments <kbd>U</kbd></span>
             </span>
         </div>
     </div>
@@ -334,7 +345,7 @@
                 if (earlierComments.length > 0) {
                     commentsHtml += `
                         <details class="disclosure">
-                            <summary class="disclosure-summary">${earlierComments.length} earlier comment${earlierComments.length !== 1 ? 's' : ''}</summary>
+                            <summary class="disclosure-summary"><span class="disclosure-summary-label">${earlierComments.length} earlier comment${earlierComments.length !== 1 ? 's' : ''}</span><span class="disclosure-summary-hint"><kbd>U</kbd></span></summary>
                             <div class="disclosure-content">
                                 ${earlierComments.map(comment => `
                                     <div class="comment">
@@ -430,6 +441,12 @@
                 e.preventDefault();
                 if (notifications[currentIndex] && currentDetail && currentDetail.url) {
                     window.open(currentDetail.url, '_blank');
+                }
+            } else if (e.code === 'KeyU' || e.key === 'u' || e.key === 'U') {
+                e.preventDefault();
+                const disclosure = document.querySelector('.disclosure');
+                if (disclosure) {
+                    disclosure.open = !disclosure.open;
                 }
             }
         }, true);

@@ -43,3 +43,4 @@ Then open http://127.0.0.1:8082 in your browser.
 | `K` | Scroll up |
 | `L` | Mark notification as read and continue to next |
 | `O` | Open issue/PR in GitHub |
+| `U` | Toggle earlier comments |

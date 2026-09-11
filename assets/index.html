@@ -283,6 +283,8 @@
         let idleTimer = null;
         let pollTimer = null;
         let lastActivityTime = Date.now();
+        let detailRequestId = 0;
+        let notificationActionQueue = Promise.resolve();
 
         async function loadNotifications() {
             try {
@@ -304,6 +306,8 @@
         }
 
         async function loadNotificationDetail(index) {
+            const requestId = ++detailRequestId;
+
             if (index >= notifications.length) {
                 currentIndex = notifications.length;
                 currentDetail = null;
@@ -320,11 +324,14 @@
             try {
                 const response = await fetch(`/api/notification/details?subject_url=${encodeURIComponent(notification.subject_url)}&comments_url=`);
                 if (!response.ok) throw new Error('Failed to fetch notification details');
-                currentDetail = await response.json();
+                const detail = await response.json();
+                if (requestId !== detailRequestId) return;
 
-                renderNotification(notification, currentDetail);
+                currentDetail = detail;
+                renderNotification(notification, detail);
                 document.getElementById('status').textContent = `${index + 1} of ${notifications.length}`;
             } catch (error) {
+                if (requestId !== detailRequestId) return;
                 document.getElementById('content').innerHTML = `<div class="callout callout-error"><div class="callout-title">Error</div><div>Error loading details: ${escapeHtml(error.message)}</div></div>`;
             }
         }
@@ -414,10 +421,10 @@
             return dateString.slice(0, 10);
         }
 
-
-
         async function markAsReadAndContinue() {
-            const notification = notifications[currentIndex];
+            const index = currentIndex;
+            const notification = notifications[index];
+            if (!notification) return;
 
             try {
                 const response = await fetch('/api/notification/mark-read', {
@@ -428,16 +435,25 @@
 
                 if (!response.ok) throw new Error('Failed to mark as read');
 
-                await loadNotificationDetail(currentIndex + 1);
+                await loadNotificationDetail(index + 1);
             } catch (error) {
                 alert(`Error marking as read: ${error.message}`);
             }
         }
 
-        function goBack() {
+        async function goBack() {
             if (currentIndex > 0) {
-                loadNotificationDetail(currentIndex - 1);
+                await loadNotificationDetail(currentIndex - 1);
             }
+        }
+
+        function enqueueNotificationAction(action) {
+            notificationActionQueue = notificationActionQueue
+                .then(action)
+                .catch(error => {
+                    console.error('Notification action failed:', error);
+                    alert(`Notification action failed: ${error.message}`);
+                });
         }
 
         document.addEventListener('keydown', (e) => {
@@ -451,10 +467,10 @@
                 window.scrollBy({ top: -300, behavior: 'smooth' });
             } else if (e.code === 'KeyL' || e.key === 'l' || e.key === 'L') {
                 e.preventDefault();
-                markAsReadAndContinue();
+                enqueueNotificationAction(markAsReadAndContinue);
             } else if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H') {
                 e.preventDefault();
-                goBack();
+                enqueueNotificationAction(goBack);
             } else if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O') {
                 e.preventDefault();
                 if (notifications[currentIndex] && currentDetail && currentDetail.url) {

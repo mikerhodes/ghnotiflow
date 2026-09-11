@@ -26,6 +26,9 @@
  * --warning:            Warning callout border and title
  * --success:            Success callout border and title
  * --info:               Info callout border and title
+ * --state-open:         GitHub open issue and pull-request icon
+ * --state-closed:       GitHub closed issue and pull-request icon
+ * --state-merged:       GitHub merged pull-request icon
  *
  * Borders
  * --surface-border:     Top and side borders on raised elements (cards, buttons, kbd)

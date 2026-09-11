@@ -49,6 +49,7 @@ type NotificationDetail struct {
 	Number      int       `json:"number"`
 	Title       string    `json:"title"`
 	State       string    `json:"state"`
+	Merged      bool      `json:"merged"`
 	URL         string    `json:"url"`
 	CommentsURL string    `json:"comments_url"`
 	Created     string    `json:"created"`

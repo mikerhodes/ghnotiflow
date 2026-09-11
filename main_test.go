@@ -44,3 +44,11 @@ func TestRenderNotificationDetailUsesEmptyCommentsArray(t *testing.T) {
 		t.Fatalf("comments should be an empty array: %s", data)
 	}
 }
+
+func TestRenderNotificationDetailPreservesMergedState(t *testing.T) {
+	rendered := renderNotificationDetail(goldmark.New(), &NotificationDetail{Merged: true}, nil)
+
+	if !rendered.Merged {
+		t.Fatal("merged state was not preserved")
+	}
+}

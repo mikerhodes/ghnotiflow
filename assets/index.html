@@ -346,6 +346,13 @@
             currentIndex = index;
             const notification = notifications[index];
 
+            if (!notification.subject_url) {
+                currentDetail = null;
+                renderNotificationWithoutDetails(notification);
+                document.getElementById('status').textContent = `${index + 1} of ${notifications.length}`;
+                return;
+            }
+
             document.getElementById('content').innerHTML = '<div class="loading-state">Loading notification details...</div>';
 
             try {
@@ -463,6 +470,25 @@
             if (!path) return '';
 
             return `<svg class="notification-status-icon ${iconClass}" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="currentColor">${path}</svg>`;
+        }
+
+        function renderNotificationWithoutDetails(notification) {
+            const html = `
+                <div class="notification-card">
+                    <div class="notification-title">
+                        ${escapeHtml(notification.title)}
+                    </div>
+                    <div class="notification-meta">
+                        <span>${escapeHtml(notification.repo)}</span>
+                        <span>•</span>
+                        <span>${escapeHtml(notification.reason)}</span>
+                        <span>•</span>
+                        <span>${escapeHtml(notification.type)}</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('content').innerHTML = html;
         }
 
         function escapeHtml(text) {

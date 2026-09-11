@@ -263,6 +263,7 @@
                 <span>Down <kbd>J</kbd></span>
                 <span>Up <kbd>K</kbd></span>
                 <span>Mark read <kbd>L</kbd></span>
+                <span>Back <kbd>H</kbd></span>
                 <span>Open <kbd>O</kbd></span>
                 <span>Earlier comments <kbd>U</kbd></span>
             </span>
@@ -304,6 +305,8 @@
 
         async function loadNotificationDetail(index) {
             if (index >= notifications.length) {
+                currentIndex = notifications.length;
+                currentDetail = null;
                 document.getElementById('content').innerHTML = '<div class="empty-state"><div class="empty-state-title">🌟 All caught up!</div><div>All notifications processed</div></div>';
                 document.getElementById('status').textContent = 'All notifications processed';
                 return;
@@ -431,6 +434,12 @@
             }
         }
 
+        function goBack() {
+            if (currentIndex > 0) {
+                loadNotificationDetail(currentIndex - 1);
+            }
+        }
+
         document.addEventListener('keydown', (e) => {
             if (e.code === 'KeyJ' || e.key === 'j' || e.key === 'J') {
                 e.preventDefault();
@@ -443,6 +452,9 @@
             } else if (e.code === 'KeyL' || e.key === 'l' || e.key === 'L') {
                 e.preventDefault();
                 markAsReadAndContinue();
+            } else if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H') {
+                e.preventDefault();
+                goBack();
             } else if (e.code === 'KeyO' || e.key === 'o' || e.key === 'O') {
                 e.preventDefault();
                 if (notifications[currentIndex] && currentDetail && currentDetail.url) {

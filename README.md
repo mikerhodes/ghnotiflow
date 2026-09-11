@@ -2,7 +2,7 @@
 
 A web-based GitHub notification viewer with a keyboard-driven interface.
 
-- Navigate with keyboard shortcuts (J, K, L, O)
+- Navigate with keyboard shortcuts (J, K, H, L, O)
 - Mark notifications as read
 - Open issues directly in GitHub
 
@@ -42,5 +42,6 @@ Then open http://127.0.0.1:8082 in your browser.
 | `J` | Scroll down |
 | `K` | Scroll up |
 | `L` | Mark notification as read and continue to next |
+| `H` | Go back to the previous notification |
 | `O` | Open issue/PR in GitHub |
 | `U` | Toggle earlier comments |

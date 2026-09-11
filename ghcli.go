@@ -61,6 +61,7 @@ func (g *GitHubCLI) FetchIssueDetails(subjectURL string) (*NotificationDetail, e
 			number: .number,
 			title: .title,
 			state: .state,
+			merged: (.merged_at != null),
 			url: .html_url,
 			comments_url: .comments_url,
 			created: .created_at,

@@ -15,6 +15,9 @@
   --warning:           #c48a1a;
   --success:           #6a9a5a;
   --info:              #2980b9;
+  --state-open:        #1f883d;
+  --state-closed:      #cf222e;
+  --state-merged:      #8250df;
   --surface-border:    #ccc4b8;
   --surface-bottom:    #b8b0a4;
   --drag-outline:      #c4622d;

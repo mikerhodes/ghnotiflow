@@ -385,6 +385,8 @@
                         <span>${notification.reason}</span>
                         <span>•</span>
                         <span>${detail.state}</span>
+                        <span>•</span>
+                        <span>created ${formatCreatedDate(detail.created)}</span>
                     </div>
                     ${detail.body ? `<div class="notification-body">${detail.body}</div>` : ''}
                     ${commentsHtml}
@@ -403,6 +405,10 @@
         function formatDate(dateString) {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatCreatedDate(dateString) {
+            return dateString.slice(0, 10);
         }
 
 

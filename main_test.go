@@ -66,7 +66,7 @@ func TestRunReturnsWhenAddressIsAlreadyInUse(t *testing.T) {
 	}
 	defer listener.Close()
 
-	err = run(context.Background(), []string{"ghnotiflow", "-addr", listener.Addr().String()})
+	err = runWithGitHubCLI(context.Background(), []string{"ghnotiflow", "-addr", listener.Addr().String()}, readyGitHubCLI())
 	if err == nil {
 		t.Fatal("run succeeded with an occupied address")
 	}
@@ -79,7 +79,7 @@ func TestRunReturnsAfterContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	if err := run(ctx, []string{"ghnotiflow", "-addr", "127.0.0.1:0"}); err != nil {
+	if err := runWithGitHubCLI(ctx, []string{"ghnotiflow", "-addr", "127.0.0.1:0"}, readyGitHubCLI()); err != nil {
 		t.Fatalf("run after cancellation: %v", err)
 	}
 }
@@ -115,5 +115,16 @@ func TestDynamicAssetsServeIndexFile(t *testing.T) {
 	}
 	if response.Body.String() != "ready" {
 		t.Fatalf("body = %q, want %q", response.Body.String(), "ready")
+	}
+}
+
+func readyGitHubCLI() *GitHubCLI {
+	return &GitHubCLI{
+		lookPath: func(string) (string, error) {
+			return "/usr/bin/gh", nil
+		},
+		runCommand: func(string, ...string) ([]byte, error) {
+			return nil, nil
+		},
 	}
 }

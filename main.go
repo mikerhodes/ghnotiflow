@@ -122,6 +122,10 @@ func (s *stringSliceFlag) Set(v string) error {
 }
 
 func run(ctx context.Context, args []string) error {
+	return runWithGitHubCLI(ctx, args, NewGitHubCLI())
+}
+
+func runWithGitHubCLI(ctx context.Context, args []string, ghCLI *GitHubCLI) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
@@ -135,6 +139,10 @@ func run(ctx context.Context, args []string) error {
 
 	if err := flags.Parse(args[1:]); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
+	if err := ghCLI.CheckReady(); err != nil {
+		return fmt.Errorf("GitHub CLI startup check failed: %w", err)
 	}
 
 	md := goldmark.New(
@@ -152,7 +160,6 @@ func run(ctx context.Context, args []string) error {
 			html.WithXHTML(),
 		),
 	)
-	ghCLI := NewGitHubCLI()
 	cache := newNotificationCache()
 
 	mux := http.NewServeMux()

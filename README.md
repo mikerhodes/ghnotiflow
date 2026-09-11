@@ -16,6 +16,8 @@ GitHub CLI (`gh`) must be installed and authenticated:
 gh auth login
 ```
 
+The server verifies both requirements at startup and exits with an error if either check fails.
+
 ### Running
 
 Build with `go build .`, then:

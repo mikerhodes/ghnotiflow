@@ -9,16 +9,37 @@ import (
 
 // GitHubCLI handles interactions with the GitHub CLI
 type GitHubCLI struct {
+	lookPath   func(string) (string, error)
+	runCommand func(string, ...string) ([]byte, error)
 }
 
 // NewGitHubCLI creates a new GitHubCLI instance with default configuration
 func NewGitHubCLI() *GitHubCLI {
-	return &GitHubCLI{}
+	return &GitHubCLI{
+		lookPath: exec.LookPath,
+		runCommand: func(name string, args ...string) ([]byte, error) {
+			return exec.Command(name, args...).CombinedOutput()
+		},
+	}
+}
+
+// CheckReady verifies that the GitHub CLI is installed and authenticated.
+func (g *GitHubCLI) CheckReady() error {
+	ghPath, err := g.lookPath("gh")
+	if err != nil {
+		return fmt.Errorf("GitHub CLI is not available: %w", err)
+	}
+
+	output, err := g.runCommand(ghPath, "auth", "status")
+	if err != nil {
+		return fmt.Errorf("GitHub CLI is not authenticated: %v - %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
 }
 
 // FetchNotifications retrieves all notifications from GitHub using gh CLI
 func (g *GitHubCLI) FetchNotifications() ([]Notification, error) {
-	cmd := exec.Command("gh", "api", "notifications", "--paginate", "--jq",
+	output, err := g.runCommand("gh", "api", "notifications", "--paginate", "--jq",
 		`.[] | {
 			number: ((.subject.url // "") | split("/") | last),
 			title: .subject.title,
@@ -30,8 +51,6 @@ func (g *GitHubCLI) FetchNotifications() ([]Notification, error) {
 			notification_url: .url,
 			subscription_url: .subscription_url
 		}`)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch notifications: %v - %s", err, string(output))
 	}
@@ -56,7 +75,7 @@ func (g *GitHubCLI) FetchNotifications() ([]Notification, error) {
 
 // FetchIssueDetails retrieves issue/PR details from GitHub using gh CLI
 func (g *GitHubCLI) FetchIssueDetails(subjectURL string) (*NotificationDetail, error) {
-	cmd := exec.Command("gh", "api", subjectURL, "--jq",
+	output, err := g.runCommand("gh", "api", subjectURL, "--jq",
 		`{
 			number: .number,
 			title: .title,
@@ -68,8 +87,6 @@ func (g *GitHubCLI) FetchIssueDetails(subjectURL string) (*NotificationDetail, e
 			updated: .updated_at,
 			body: .body
 		}`)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch notification details: %v - %s", err, string(output))
 	}
@@ -88,10 +105,8 @@ func (g *GitHubCLI) FetchComments(commentsURL string) ([]Comment, error) {
 		return nil, nil
 	}
 
-	cmd := exec.Command("gh", "api", commentsURL, "--paginate", "--jq",
+	output, err := g.runCommand("gh", "api", commentsURL, "--paginate", "--jq",
 		`[.[] | {created_at: .created_at, body: .body, author: .user.login}]`)
-
-	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch comments: %v - %s", err, string(output))
 	}
@@ -106,9 +121,9 @@ func (g *GitHubCLI) FetchComments(commentsURL string) ([]Comment, error) {
 
 // MarkNotificationAsRead marks a notification as read using gh CLI
 func (g *GitHubCLI) MarkNotificationAsRead(notificationURL string) error {
-	cmd := exec.Command("gh", "api", "-X", "PATCH", notificationURL)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to mark notification as read: %v", err)
+	output, err := g.runCommand("gh", "api", "-X", "PATCH", notificationURL)
+	if err != nil {
+		return fmt.Errorf("failed to mark notification as read: %v - %s", err, string(output))
 	}
 	return nil
 }

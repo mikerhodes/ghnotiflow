@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -29,5 +30,17 @@ func TestRenderNotificationDetailDoesNotMutateCachedContent(t *testing.T) {
 	}
 	if !strings.Contains(second.Comments[0].Body, "<strong>comment</strong>") {
 		t.Fatalf("rendered comment body missing content: %q", second.Comments[0].Body)
+	}
+}
+
+func TestRenderNotificationDetailUsesEmptyCommentsArray(t *testing.T) {
+	rendered := renderNotificationDetail(goldmark.New(), &NotificationDetail{}, nil)
+
+	data, err := json.Marshal(rendered)
+	if err != nil {
+		t.Fatalf("marshal rendered detail: %v", err)
+	}
+	if !strings.Contains(string(data), `"comments":[]`) {
+		t.Fatalf("comments should be an empty array: %s", data)
 	}
 }

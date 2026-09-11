@@ -227,7 +227,8 @@ func markdownToHTML(md goldmark.Markdown, markdown string) string {
 
 func renderNotificationDetail(md goldmark.Markdown, detail *NotificationDetail, comments []Comment) *NotificationDetail {
 	rendered := *detail
-	rendered.Comments = append([]Comment(nil), comments...)
+	rendered.Comments = make([]Comment, len(comments))
+	copy(rendered.Comments, comments)
 
 	if rendered.Body != "" {
 		rendered.Body = markdownToHTML(md, rendered.Body)

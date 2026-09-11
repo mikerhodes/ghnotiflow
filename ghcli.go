@@ -18,9 +18,9 @@ func NewGitHubCLI() *GitHubCLI {
 
 // FetchNotifications retrieves all notifications from GitHub using gh CLI
 func (g *GitHubCLI) FetchNotifications() ([]Notification, error) {
-	cmd := exec.Command("gh", "api", "notifications", "--jq",
+	cmd := exec.Command("gh", "api", "notifications", "--paginate", "--jq",
 		`.[] | {
-			number: (.subject.url | split("/") | last),
+			number: ((.subject.url // "") | split("/") | last),
 			title: .subject.title,
 			type: .subject.type,
 			reason: .reason,
@@ -111,4 +111,3 @@ func (g *GitHubCLI) MarkNotificationAsRead(notificationURL string) error {
 	}
 	return nil
 }
-

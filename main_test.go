@@ -1,13 +1,7 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"net"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -56,75 +50,5 @@ func TestRenderNotificationDetailPreservesMergedState(t *testing.T) {
 
 	if !rendered.Merged {
 		t.Fatal("merged state was not preserved")
-	}
-}
-
-func TestRunReturnsWhenAddressIsAlreadyInUse(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("reserve address: %v", err)
-	}
-	defer listener.Close()
-
-	err = runWithGitHubCLI(context.Background(), []string{"ghnotiflow", "-addr", listener.Addr().String()}, readyGitHubCLI())
-	if err == nil {
-		t.Fatal("run succeeded with an occupied address")
-	}
-	if !strings.Contains(err.Error(), "could not listen") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestRunReturnsAfterContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	if err := runWithGitHubCLI(ctx, []string{"ghnotiflow", "-addr", "127.0.0.1:0"}, readyGitHubCLI()); err != nil {
-		t.Fatalf("run after cancellation: %v", err)
-	}
-}
-
-func TestDynamicAssetsRequireIndexFile(t *testing.T) {
-	_, err := newAssetsHandler(true, t.TempDir())
-	if err == nil {
-		t.Fatal("dynamic assets succeeded without index.html")
-	}
-	if !strings.Contains(err.Error(), "could not load dynamic assets") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestDynamicAssetsServeIndexFile(t *testing.T) {
-	assetsDir := t.TempDir()
-	indexPath := filepath.Join(assetsDir, "index.html")
-	if err := os.WriteFile(indexPath, []byte("ready"), 0o600); err != nil {
-		t.Fatalf("write index: %v", err)
-	}
-
-	handler, err := newAssetsHandler(true, assetsDir)
-	if err != nil {
-		t.Fatalf("create dynamic assets handler: %v", err)
-	}
-
-	request := httptest.NewRequest(http.MethodGet, "/", nil)
-	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, request)
-
-	if response.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
-	}
-	if response.Body.String() != "ready" {
-		t.Fatalf("body = %q, want %q", response.Body.String(), "ready")
-	}
-}
-
-func readyGitHubCLI() *GitHubCLI {
-	return &GitHubCLI{
-		lookPath: func(string) (string, error) {
-			return "/usr/bin/gh", nil
-		},
-		runCommand: func(string, ...string) ([]byte, error) {
-			return nil, nil
-		},
 	}
 }

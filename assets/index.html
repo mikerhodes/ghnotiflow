@@ -312,6 +312,13 @@
             currentIndex = index;
             const notification = notifications[index];
 
+            if (!notification.subject_url) {
+                currentDetail = null;
+                renderNotificationWithoutDetails(notification);
+                document.getElementById('status').textContent = `${index + 1} of ${notifications.length}`;
+                return;
+            }
+
             document.getElementById('content').innerHTML = '<div class="loading-state">Loading notification details...</div>';
 
             try {
@@ -390,6 +397,25 @@
                     </div>
                     ${detail.body ? `<div class="notification-body">${detail.body}</div>` : ''}
                     ${commentsHtml}
+                </div>
+            `;
+
+            document.getElementById('content').innerHTML = html;
+        }
+
+        function renderNotificationWithoutDetails(notification) {
+            const html = `
+                <div class="notification-card">
+                    <div class="notification-title">
+                        ${escapeHtml(notification.title)}
+                    </div>
+                    <div class="notification-meta">
+                        <span>${escapeHtml(notification.repo)}</span>
+                        <span>•</span>
+                        <span>${escapeHtml(notification.reason)}</span>
+                        <span>•</span>
+                        <span>${escapeHtml(notification.type)}</span>
+                    </div>
                 </div>
             `;
 

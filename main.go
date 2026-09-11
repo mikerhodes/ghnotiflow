@@ -225,6 +225,22 @@ func markdownToHTML(md goldmark.Markdown, markdown string) string {
 	return buf.String()
 }
 
+func renderNotificationDetail(md goldmark.Markdown, detail *NotificationDetail, comments []Comment) *NotificationDetail {
+	rendered := *detail
+	rendered.Comments = append([]Comment(nil), comments...)
+
+	if rendered.Body != "" {
+		rendered.Body = markdownToHTML(md, rendered.Body)
+	}
+	for i := range rendered.Comments {
+		if rendered.Comments[i].Body != "" {
+			rendered.Comments[i].Body = markdownToHTML(md, rendered.Comments[i].Body)
+		}
+	}
+
+	return &rendered
+}
+
 func handleGetNotifications(ghCLI *GitHubCLI, cache *notificationCache, skipRepos, skipReviewRequestedFrom stringSliceFlag) http.Handler {
 	skipRepoSet := make(map[string]bool, len(skipRepos))
 	for _, r := range skipRepos {
@@ -336,11 +352,6 @@ func handleGetNotificationDetails(ghCLI *GitHubCLI, md goldmark.Markdown, cache 
 			}
 		}
 
-		// Convert markdown to HTML
-		if detail.Body != "" {
-			detail.Body = markdownToHTML(md, detail.Body)
-		}
-
 		// Fetch comments if not in cache
 		if detail.CommentsURL != "" && comments == nil {
 			comments, err = ghCLI.FetchComments(detail.CommentsURL)
@@ -353,17 +364,10 @@ func handleGetNotificationDetails(ghCLI *GitHubCLI, md goldmark.Markdown, cache 
 			comments = []Comment{}
 		}
 
-		detail.Comments = comments
-
-		// Convert markdown to HTML for each comment
-		for i := range detail.Comments {
-			if detail.Comments[i].Body != "" {
-				detail.Comments[i].Body = markdownToHTML(md, detail.Comments[i].Body)
-			}
-		}
+		renderedDetail := renderNotificationDetail(md, detail, comments)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(detail)
+		json.NewEncoder(w).Encode(renderedDetail)
 	})
 }
 

@@ -265,7 +265,9 @@ func handleGetNotifications(ghCLI *GitHubCLI, cache *notificationCache, skipRepo
 		var wantedNotifications []Notification
 		for _, n := range notifications {
 			log.Printf("checking notification %+v", n)
-			if n.Reason == "review_requested" && skipReviewOrgSet[n.Owner] {
+			if n.Type == "AgentSessionThread" {
+				unwantedNotifications = append(unwantedNotifications, n)
+			} else if n.Reason == "review_requested" && skipReviewOrgSet[n.Owner] {
 				unwantedNotifications = append(unwantedNotifications, n)
 			} else if skipRepoSet[n.Repo] {
 				unwantedNotifications = append(unwantedNotifications, n)
@@ -281,7 +283,7 @@ func handleGetNotifications(ghCLI *GitHubCLI, cache *notificationCache, skipRepo
 					continue
 				}
 				if err := ghCLI.MarkNotificationAsRead(notif.NotificationURL); err != nil {
-					log.Printf("Failed to mark review_requested notification as read %s: %v", notif.NotificationURL, err)
+					log.Printf("Failed to mark unwanted notification as read %s: %v", notif.NotificationURL, err)
 				} else {
 					log.Printf("Discarded unwanted notification: %s", notif.Title)
 				}

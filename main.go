@@ -5,13 +5,16 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -119,6 +122,10 @@ func (s *stringSliceFlag) Set(v string) error {
 }
 
 func run(ctx context.Context, args []string) error {
+	return runWithGitHubCLI(ctx, args, NewGitHubCLI())
+}
+
+func runWithGitHubCLI(ctx context.Context, args []string, ghCLI *GitHubCLI) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
 
@@ -132,6 +139,10 @@ func run(ctx context.Context, args []string) error {
 
 	if err := flags.Parse(args[1:]); err != nil {
 		return fmt.Errorf("failed to parse flags: %w", err)
+	}
+
+	if err := ghCLI.CheckReady(); err != nil {
+		return fmt.Errorf("GitHub CLI startup check failed: %w", err)
 	}
 
 	md := goldmark.New(
@@ -149,21 +160,15 @@ func run(ctx context.Context, args []string) error {
 			html.WithXHTML(),
 		),
 	)
-	ghCLI := NewGitHubCLI()
 	cache := newNotificationCache()
 
 	mux := http.NewServeMux()
 
-	// Serve assets either from disk (useful for debug) or from embed in binary
-	if *dynamicAssets {
-		mux.Handle("GET /", http.FileServer(http.Dir("assets")))
-	} else {
-		assetsSub, err := fs.Sub(assets, "assets")
-		if err != nil {
-			return fmt.Errorf("could not load assets from binary: %w", err)
-		}
-		mux.Handle("GET /", http.FileServerFS(assetsSub))
+	assetsHandler, err := newAssetsHandler(*dynamicAssets, "assets")
+	if err != nil {
+		return err
 	}
+	mux.Handle("GET /", assetsHandler)
 
 	mux.Handle("GET /api/notifications", handleGetNotifications(ghCLI, cache, skipRepos, skipReviewRequestedFrom))
 	mux.Handle("GET /api/notification/details", handleGetNotificationDetails(ghCLI, md, cache))
@@ -176,25 +181,62 @@ func run(ctx context.Context, args []string) error {
 		Handler: handler,
 	}
 
+	listener, err := net.Listen("tcp", httpServer.Addr)
+	if err != nil {
+		return fmt.Errorf("could not listen on %s: %w", httpServer.Addr, err)
+	}
+
+	serverErr := make(chan error, 1)
 	go func() {
-		log.Printf("listening on http://%s\n", httpServer.Addr)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("error listening and serving: %s\n", err)
+		err := httpServer.Serve(listener)
+		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
 		}
+		serverErr <- err
 	}()
 
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		<-ctx.Done()
+	log.Printf("listening on http://%s\n", listener.Addr())
+
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			return fmt.Errorf("error serving HTTP: %w", err)
+		}
+		return nil
+	case <-ctx.Done():
 		shutdownCtx := context.Background()
 		shutdownCtx, cancel := context.WithTimeout(shutdownCtx, 10*time.Second)
 		defer cancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			log.Printf("error shutting down http server: %s\n", err)
+			_ = httpServer.Close()
+			return fmt.Errorf("error shutting down HTTP server: %w", err)
 		}
-	})
-	wg.Wait()
-	return nil
+
+		if err := <-serverErr; err != nil {
+			return fmt.Errorf("error serving HTTP during shutdown: %w", err)
+		}
+		return nil
+	}
+}
+
+func newAssetsHandler(dynamic bool, dynamicDir string) (http.Handler, error) {
+	if dynamic {
+		indexPath := filepath.Join(dynamicDir, "index.html")
+		info, err := os.Stat(indexPath)
+		if err != nil {
+			return nil, fmt.Errorf("could not load dynamic assets from %s: %w", dynamicDir, err)
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("could not load dynamic assets from %s: %s is not a regular file", dynamicDir, indexPath)
+		}
+		return http.FileServer(http.Dir(dynamicDir)), nil
+	}
+
+	assetsSub, err := fs.Sub(assets, "assets")
+	if err != nil {
+		return nil, fmt.Errorf("could not load assets from binary: %w", err)
+	}
+	return http.FileServerFS(assetsSub), nil
 }
 
 type responseWriter struct {
